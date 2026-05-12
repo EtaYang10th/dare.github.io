@@ -1,0 +1,316 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>DARE — Difficulty-Adaptive Reinforcement Learning with Co-Evolved Difficulty Estimation</title>
+  <meta name="description" content="DARE is a difficulty-adaptive reinforcement learning framework for LLM reasoning. It co-evolves difficulty estimation with the policy, samples prompts through a symmetric Beta distribution, and applies difficulty-specific optimization strategies." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Source+Serif+4:opsz,wght@8..60,500;8..60,650;8..60,750&family=JetBrains+Mono:wght@400;500;600;700&display=swap" />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+<nav class="site-nav">
+  <div class="wrap">
+    <a class="brand" href="#top">
+      <span class="brand-logo">D</span>
+      <span class="brand-name">DARE</span>
+    </a>
+    <button class="nav-toggle" aria-label="toggle nav">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M3 12h18M3 18h18"/></svg>
+    </button>
+    <div class="nav-links">
+      <a href="#problem">Problem</a>
+      <a href="#framework">Framework</a>
+      <a href="#estimation">Estimator</a>
+      <a href="#optimization">Optimization</a>
+      <a href="#results">Results</a>
+      <a href="#quickstart">Quick Start</a>
+      <a href="#resources">Resources</a>
+      <a class="nav-cta" href="https://github.com/EtaYang10th/DARE" target="_blank" rel="noopener">GitHub</a>
+    </div>
+  </div>
+</nav>
+
+<header id="top" class="hero">
+  <div class="container">
+    <div class="hero-eyebrow"><span></span> arXiv 2605.09188 · Reinforcement Learning for Reasoning</div>
+    <h1>
+      <span>Difficulty-Adaptive</span><br/>
+      RL with Co-Evolved Difficulty Estimation
+    </h1>
+    <p class="tagline">
+      DARE is a unified reinforcement learning framework for LLM reasoning that moves beyond difficulty-aware filtering.
+      It estimates prompt difficulty under the current policy, preserves diverse difficulty coverage, and adapts compute,
+      clipping, and reward shaping across easy, medium, and hard prompts.
+    </p>
+
+    <div class="hero-chips">
+      <span class="chip">policy-aligned SNIS estimator</span>
+      <span class="chip mag">symmetric-Beta sampling</span>
+      <span class="chip lime">tiered rollout allocation</span>
+      <span class="chip amber">token-efficient inference</span>
+    </div>
+
+    <div class="ctas">
+      <a class="btn primary" href="https://arxiv.org/abs/2605.09188" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        arXiv 2605.09188
+      </a>
+      <a class="btn" href="https://arxiv.org/pdf/2605.09188" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+        PDF
+      </a>
+      <a class="btn" href="https://github.com/EtaYang10th/DARE" target="_blank" rel="noopener">
+        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 .5A11.5 11.5 0 0 0 .5 12c0 5.08 3.29 9.39 7.86 10.92.58.11.79-.25.79-.56v-2c-3.2.69-3.87-1.54-3.87-1.54-.53-1.35-1.3-1.71-1.3-1.71-1.06-.72.08-.71.08-.71 1.17.08 1.78 1.2 1.78 1.2 1.04 1.78 2.73 1.27 3.4.97.1-.75.41-1.27.74-1.56-2.55-.29-5.24-1.28-5.24-5.68 0-1.26.45-2.28 1.18-3.08-.12-.29-.51-1.46.11-3.04 0 0 .96-.31 3.16 1.17a10.98 10.98 0 0 1 5.76 0c2.2-1.48 3.16-1.17 3.16-1.17.62 1.58.23 2.75.11 3.04.73.8 1.18 1.82 1.18 3.08 0 4.41-2.69 5.39-5.25 5.67.42.36.8 1.08.8 2.18v3.23c0 .31.21.68.8.56A11.5 11.5 0 0 0 23.5 12 11.5 11.5 0 0 0 12 .5z"/></svg>
+        Code
+      </a>
+    </div>
+
+    <div class="pipeline-card" aria-label="DARE overview pipeline">
+      <div class="pipe-node">
+        <b>Replay buffer</b>
+        <span>responses · rewards · behavior log-probs</span>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node">
+        <b>SNIS difficulty</b>
+        <span>current-policy failure estimate</span>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node">
+        <b>Beta sampler</b>
+        <span>medium focus with tail coverage</span>
+      </div>
+      <div class="pipe-arrow">→</div>
+      <div class="pipe-node">
+        <b>Tiered RL</b>
+        <span>easy · medium · hard strategies</span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<section id="problem" class="section">
+  <div class="container">
+    <div class="section-eyebrow">Problem</div>
+    <h2>Difficulty Filtering Alone Leaves Compute on the Table</h2>
+    <p class="lead">
+      Reinforcement learning can improve LLM reasoning, but many rollouts provide weak learning signals. Existing
+      difficulty-aware methods usually select medium-difficulty prompts, yet the paper shows three bottlenecks:
+      difficulty estimates drift as the policy changes, selection alone brings limited final-performance gains, and
+      inference responses remain uniformly long across difficulty levels.
+    </p>
+
+    <div class="grid cols-3 mt-24">
+      <div class="card">
+        <h3>Policy drift</h3>
+        <p>Static or slowly updated difficulty labels no longer match the live policy, so selected prompts can become too easy or too hard.</p>
+      </div>
+      <div class="card">
+        <h3>Filtration ceiling</h3>
+        <p>Changing only which prompts are sampled does not teach the model to allocate different reasoning effort across difficulty tiers.</p>
+      </div>
+      <div class="card">
+        <h3>Inference inefficiency</h3>
+        <p>Filtering-based RL often preserves long chain-of-thought behavior even on easy prompts where concise correct answers should suffice.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="framework" class="section alt">
+  <div class="container">
+    <div class="section-eyebrow">Framework</div>
+    <h2>DARE Couples Estimation, Selection, and Optimization</h2>
+    <p class="lead">
+      DARE treats prompt difficulty as a policy-dependent quantity. At each epoch, it co-evolves a difficulty estimate
+      with the policy, samples data using a smooth difficulty distribution, and applies tier-specific training objectives.
+    </p>
+
+    <div class="grid cols-3 mt-24">
+      <div class="card numbered">
+        <span>01</span>
+        <h3>Co-Evolved Difficulty Estimation</h3>
+        <p>A prompt-wise replay buffer stores prior rollouts and estimates the current-policy failure rate through self-normalized importance sampling.</p>
+      </div>
+      <div class="card numbered">
+        <span>02</span>
+        <h3>Dynamic Data Selection</h3>
+        <p>A symmetric Beta sampler emphasizes medium-difficulty prompts while retaining easy and hard tails to avoid forgetting and starvation.</p>
+      </div>
+      <div class="card numbered">
+        <span>03</span>
+        <h3>Difficulty-Adaptive RL</h3>
+        <p>Easy, medium, and hard prompts receive different rollout budgets, clipping ranges, and reward-shaping terms.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="estimation" class="section">
+  <div class="container">
+    <div class="section-eyebrow">Estimator</div>
+    <h2>Current-Policy Difficulty from Historical Rollouts</h2>
+    <p class="lead">
+      The central estimator uses self-normalized importance sampling to correct replayed trajectories toward the current policy.
+      For each prompt, DARE stores response, reward, and behavior log-probability tuples; unseen prompts fall back to an embedding-based cold-start estimator.
+    </p>
+
+    <div class="estimator-grid mt-24">
+      <div class="formula-card">
+        <div class="formula-title">Prompt difficulty</div>
+        <div class="formula">d<sub>q</sub> = current-policy failure rate</div>
+        <p>
+          Difficulty is not a fixed dataset attribute. It changes as the model learns, so DARE updates it continuously from replayed evidence.
+        </p>
+      </div>
+      <div class="formula-card">
+        <div class="formula-title">Sampling weight</div>
+        <div class="formula">p(q) ∝ Beta(d<sub>q</sub>; 1 + κ/2, 1 + κ/2)</div>
+        <p>
+          The symmetric distribution creates a soft curriculum: medium prompts receive high probability, but easy and hard examples remain visible.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="optimization" class="section alt">
+  <div class="container">
+    <div class="section-eyebrow">Optimization</div>
+    <h2>One Policy, Three Difficulty Tiers</h2>
+    <p class="lead">
+      DARE adapts the training signal rather than merely filtering data. The policy learns to be concise on easy prompts, robust on medium prompts,
+      and more exploratory on hard prompts.
+    </p>
+
+    <div class="tier-table mt-24">
+      <div class="tier-row header">
+        <div>Tier</div>
+        <div>Difficulty range</div>
+        <div>Training strategy</div>
+        <div>Intended behavior</div>
+      </div>
+      <div class="tier-row easy">
+        <div><b>Easy</b></div>
+        <div>d<sub>q</sub> &lt; d<sub>easy</sub></div>
+        <div>Fewer rollouts, length penalty on correct responses, relaxed upper clipping.</div>
+        <div>Keep accuracy while reducing unnecessary tokens.</div>
+      </div>
+      <div class="tier-row medium">
+        <div><b>Medium</b></div>
+        <div>d<sub>easy</sub> ≤ d<sub>q</sub> ≤ d<sub>hard</sub></div>
+        <div>Standard group-relative policy optimization with the base rollout count.</div>
+        <div>Use high-variance learning signals efficiently.</div>
+      </div>
+      <div class="tier-row hard">
+        <div><b>Hard</b></div>
+        <div>d<sub>q</sub> &gt; d<sub>hard</sub></div>
+        <div>More rollouts, hint-augmented retrieval, and a bounded length bonus for incorrect attempts.</div>
+        <div>Encourage continued exploration without overpowering correctness.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="results" class="section">
+  <div class="container">
+    <div class="section-eyebrow">Results</div>
+    <h2>Paper Tables as an Interactive Evidence Atlas</h2>
+    <p class="lead">
+      The paper reports accuracy, estimator quality, token usage, ablations, memory usage, and code-transfer results across multiple model scales.
+      Instead of static screenshots, the web version renders these tables as sortable, switchable panels so the empirical story can be inspected directly.
+    </p>
+
+    <div id="result-summary" class="stat-strip" aria-label="DARE key empirical highlights"></div>
+    <div id="results-atlas" class="mt-32" aria-live="polite"></div>
+  </div>
+</section>
+
+<section id="quickstart" class="section alt">
+  <div class="container">
+    <div class="section-eyebrow">Quick Start</div>
+    <h2>Run the Released Implementation</h2>
+    <p class="lead">
+      The code release contains a cold-start difficulty estimator, a local <code>verl</code> fork, replay-buffer-based selection, and DARE training scripts.
+    </p>
+
+    <div class="code-grid mt-24">
+      <div>
+        <h3>Install</h3>
+<pre class="code"><code>git clone https://github.com/EtaYang10th/DARE.git
+cd DARE
+bash environment.sh</code></pre>
+      </div>
+      <div>
+        <h3>Train</h3>
+<pre class="code"><code>cd rl_training
+bash run_bash/1_ours_small_model.sh
+bash run_bash/12_final_ds_teacher_replay.sh</code></pre>
+      </div>
+    </div>
+
+    <div class="grid cols-2 mt-24">
+      <div class="card">
+        <h3>Core implementation</h3>
+        <p><code>rl_training/verl/verl/trainer/ppo/is_data_selector.py</code> implements SNIS difficulty estimation, Beta sampling, and baseline variants.</p>
+      </div>
+      <div class="card">
+        <h3>Tiered RL loop</h3>
+        <p><code>rl_training/verl/verl/trainer/ppo/ray_trainer.py</code> handles rollout allocation, reward shaping, replay mixing, and evaluation logging.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="resources" class="section">
+  <div class="container">
+    <div class="section-eyebrow">Resources</div>
+    <h2>Paper, Code, and Citation</h2>
+
+    <div class="grid cols-3 mt-24">
+      <a class="card link-card" href="https://arxiv.org/abs/2605.09188" target="_blank" rel="noopener">
+        <h3>arXiv Paper</h3>
+        <p>DARE: Difficulty-Adaptive Reinforcement Learning with Co-Evolved Difficulty Estimation.</p>
+      </a>
+      <a class="card link-card" href="https://arxiv.org/pdf/2605.09188" target="_blank" rel="noopener">
+        <h3>PDF</h3>
+        <p>Direct PDF download from arXiv.</p>
+      </a>
+      <a class="card link-card" href="https://github.com/EtaYang10th/DARE" target="_blank" rel="noopener">
+        <h3>GitHub Code</h3>
+        <p>DARE implementation, training scripts, and local <code>verl</code> fork.</p>
+      </a>
+    </div>
+
+    <h3 class="mt-32">BibTeX</h3>
+    <div class="bibtex-wrap">
+      <button class="copy-btn" data-copy="#bibtex-box">Copy</button>
+<pre class="code" id="bibtex-box"><code>@misc{zhou2026dare,
+  title         = {DARE: Difficulty-Adaptive Reinforcement Learning with Co-Evolved Difficulty Estimation},
+  author        = {Zhou, Yang and Jin, Can and Dong, Zihan and Wang, Zhepeng and
+                   Yang, Yanting and Zhao, Shiyu and Li, Lei and Bao, Runxue and
+                   Xie, Yaochen and Metaxas, Dimitris N.},
+  year          = {2026},
+  eprint        = {2605.09188},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.LG},
+  url           = {https://arxiv.org/abs/2605.09188}
+}</code></pre>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container wrap">
+    <div>© 2026 DARE · Difficulty-adaptive reinforcement learning.</div>
+    <a href="#top">Back to top</a>
+  </div>
+</footer>
+
+<script src="assets/js/main.js"></script>
+</body>
+</html>
