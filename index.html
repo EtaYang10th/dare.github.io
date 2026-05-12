@@ -27,6 +27,7 @@
       <a href="#estimation">Estimator</a>
       <a href="#optimization">Optimization</a>
       <a href="#results">Results</a>
+      <a href="#dynamic-figures">Figures</a>
       <a href="#quickstart">Quick Start</a>
       <a href="#resources">Resources</a>
       <a class="nav-cta" href="https://github.com/EtaYang10th/DARE" target="_blank" rel="noopener">GitHub</a>
@@ -227,6 +228,33 @@
 
     <div id="result-summary" class="stat-strip" aria-label="DARE key empirical highlights"></div>
     <div id="results-atlas" class="mt-32" aria-live="polite"></div>
+  </div>
+</section>
+
+<section id="dynamic-figures" class="section alt">
+  <div class="container">
+    <div class="section-eyebrow">Dynamic Figures</div>
+    <h2>Browser-Rendered Figures from Paper Data</h2>
+    <p class="lead">
+      The quantitative figures below are rendered directly in the browser from the same structured data used by the sortable tables.
+      They are visible as a standalone section rather than hidden inside a tab.
+    </p>
+
+    <div class="figures-shell mt-32">
+      <div class="panel-head">
+        <div>
+          <h3 id="standalone-figure-title">Estimator error landscape</h3>
+          <p id="standalone-figure-caption">MSE and MAE are plotted jointly so the gap to oracle and DARE are visible.</p>
+        </div>
+        <div class="metric-switch" aria-label="Standalone dynamic figure selector">
+          <button class="active" data-standalone-figure="estimator">Estimator</button>
+          <button data-standalone-figure="training">Training</button>
+          <button data-standalone-figure="tokens">Tokens</button>
+          <button data-standalone-figure="clip">Clip</button>
+        </div>
+      </div>
+      <div id="standalone-dynamic-figure" class="dynamic-figure mt-16"></div>
+    </div>
   </div>
 </section>
 

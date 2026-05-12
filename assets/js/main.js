@@ -710,19 +710,36 @@ function renderHyperparameterSweeps() {
 }
 
 function setFigureMeta(title, caption) {
-  const titleEl = document.getElementById("figure-title");
-  const captionEl = document.getElementById("figure-caption");
-  if (titleEl) titleEl.textContent = title;
-  if (captionEl) captionEl.textContent = caption;
+  const titleIds = ["figure-title", "standalone-figure-title"];
+  const captionIds = ["figure-caption", "standalone-figure-caption"];
+  titleIds.forEach((id) => {
+    const titleEl = document.getElementById(id);
+    if (titleEl) titleEl.textContent = title;
+  });
+  captionIds.forEach((id) => {
+    const captionEl = document.getElementById(id);
+    if (captionEl) captionEl.textContent = caption;
+  });
 }
 
 function svgShell(width, height, body, label) {
   return `<svg class="figure-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${htmlEscape(label)}">${body}</svg>`;
 }
 
+function figureRoots() {
+  return ["dynamic-figure", "standalone-dynamic-figure"]
+    .map((id) => document.getElementById(id))
+    .filter(Boolean);
+}
+
+function setFigureHtml(html) {
+  figureRoots().forEach((root) => {
+    root.innerHTML = html;
+  });
+}
+
 function renderEstimatorFigure() {
-  const root = document.getElementById("dynamic-figure");
-  if (!root) return;
+  if (!figureRoots().length) return;
   setFigureMeta("Estimator error landscape", "MSE and MAE are plotted jointly; the closer a point is to the lower-left corner, the more policy-aligned it is.");
 
   const rows = paperData.difficulty;
@@ -763,7 +780,7 @@ function renderEstimatorFigure() {
     </g>`;
   }).join("");
 
-  root.innerHTML = svgShell(width, height, `
+  setFigureHtml(svgShell(width, height, `
     ${grid}
     <line class="fig-axis" x1="${margin.left}" x2="${width - margin.right}" y1="${height - margin.bottom}" y2="${height - margin.bottom}" />
     <line class="fig-axis" x1="${margin.left}" x2="${margin.left}" y1="${margin.top}" y2="${height - margin.bottom}" />
@@ -773,12 +790,11 @@ function renderEstimatorFigure() {
     <rect class="fig-region" x="${x(0)}" y="${y(0.22)}" width="${x(0.08) - x(0)}" height="${y(0) - y(0.22)}" rx="16" />
     <text class="fig-region-label" x="${x(0.012)}" y="${y(0.205)}">low-error region</text>
     ${points}
-  `, "Estimator MSE versus MAE scatter plot");
+  `, "Estimator MSE versus MAE scatter plot"));
 }
 
 function renderTrainingFigure() {
-  const root = document.getElementById("dynamic-figure");
-  if (!root) return;
+  if (!figureRoots().length) return;
   setFigureMeta("Training efficiency, table-derived view", "AUC is displayed as horizontal bars; target-step speed is shown as a second band. This uses reported efficiency-table values, not fabricated curve points.");
 
   const rows = paperData.training["Qwen2.5-Math-7B"];
@@ -806,16 +822,15 @@ function renderTrainingFigure() {
     </g>`;
   }).join("");
 
-  root.innerHTML = svgShell(width, height, `
+  setFigureHtml(svgShell(width, height, `
     <text class="fig-title" x="${margin.left}" y="24">Qwen2.5-Math-7B · MATH-500 efficiency</text>
     ${bars}
     <text class="fig-legend" x="${margin.left}" y="${height - 24}">gold bar = AUC · sage underbar = faster target-step arrival</text>
-  `, "Training efficiency dynamic bar figure");
+  `, "Training efficiency dynamic bar figure"));
 }
 
 function renderTokenFigure() {
-  const root = document.getElementById("dynamic-figure");
-  if (!root) return;
+  if (!figureRoots().length) return;
   setFigureMeta("Difficulty-level token allocation", "DARE is compared against GRPO and SNIS-only filtering. Bars encode output tokens; labels encode accuracy.");
 
   const rows = [paperData.inference[0], paperData.inference[6], paperData.inference[7]];
@@ -853,19 +868,18 @@ function renderTokenFigure() {
     return `${groupBars}<text class="fig-tick" x="${center}" y="${height - 26}" text-anchor="middle">${level.label}</text>`;
   }).join("");
 
-  root.innerHTML = svgShell(width, height, `
+  setFigureHtml(svgShell(width, height, `
     ${grid}
     <line class="fig-axis" x1="${margin.left}" x2="${width - margin.right}" y1="${height - margin.bottom}" y2="${height - margin.bottom}" />
     <line class="fig-axis" x1="${margin.left}" x2="${margin.left}" y1="${margin.top}" y2="${height - margin.bottom}" />
     ${bars}
     <text class="fig-axis-title" transform="translate(24 ${height / 2}) rotate(-90)" text-anchor="middle">Average output tokens</text>
     <text class="fig-legend" x="${margin.left}" y="24">blue = GRPO · sage = SNIS only · gold = DARE · labels = accuracy</text>
-  `, "Token allocation grouped bar figure");
+  `, "Token allocation grouped bar figure"));
 }
 
 function renderClipFigure() {
-  const root = document.getElementById("dynamic-figure");
-  if (!root) return;
+  if (!figureRoots().length) return;
   setFigureMeta("Asymmetric clipping sweep", "Each cell shows benchmark accuracy under an easy-prompt clipping range. Darker gold indicates higher accuracy within the benchmark column.");
 
   const rows = paperData.clip;
@@ -904,11 +918,11 @@ function renderClipFigure() {
   }).join("");
   const headers = metrics.map((metric, index) => `<text class="fig-tick" x="${margin.left + index * cellW + cellW / 2}" y="${margin.top - 20}" text-anchor="middle">${metric.label}</text>`).join("");
 
-  root.innerHTML = svgShell(width, height, `
+  setFigureHtml(svgShell(width, height, `
     ${headers}
     ${cells}
     <text class="fig-axis-title" x="${margin.left}" y="26">Clip range × benchmark accuracy</text>
-  `, "Clip sweep heatmap figure");
+  `, "Clip sweep heatmap figure"));
 }
 
 function renderDynamicFigure(name = "estimator") {
@@ -1026,11 +1040,14 @@ function initMetricButtons() {
     });
   });
 
-  document.querySelectorAll(".metric-switch [data-figure]").forEach((button) => {
+  document.querySelectorAll(".metric-switch [data-figure], .metric-switch [data-standalone-figure]").forEach((button) => {
     button.addEventListener("click", () => {
-      const parent = button.closest(".metric-switch");
-      parent?.querySelectorAll("button").forEach((item) => item.classList.toggle("active", item === button));
-      renderDynamicFigure(button.dataset.figure);
+      const figureName = button.dataset.figure || button.dataset.standaloneFigure;
+      document.querySelectorAll("[data-figure], [data-standalone-figure]").forEach((item) => {
+        const itemName = item.dataset.figure || item.dataset.standaloneFigure;
+        item.classList.toggle("active", itemName === figureName);
+      });
+      renderDynamicFigure(figureName);
     });
   });
 }

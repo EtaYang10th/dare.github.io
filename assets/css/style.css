@@ -578,6 +578,13 @@ sub { line-height: 0; }
 }
 .bar-scale-note { margin-top: 4px; color: var(--fg-muted); font-family: "JetBrains Mono", monospace; font-size: 11px; text-align: right; }
 
+.figures-shell {
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, rgba(27, 34, 46, 0.88), rgba(16, 20, 29, 0.92));
+  box-shadow: var(--shadow);
+}
 .figure-card { min-height: 560px; }
 .dynamic-figure {
   min-height: 420px;
