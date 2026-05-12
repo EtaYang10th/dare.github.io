@@ -324,6 +324,7 @@ function buildResultsAtlas() {
         <button data-tab="estimation" role="tab">Estimator</button>
         <button data-tab="transfer" role="tab">Transfer</button>
         <button data-tab="robustness" role="tab">Robustness</button>
+        <button data-tab="figures" role="tab">Figures</button>
       </div>
 
       <div class="result-panel active" data-panel="main">
@@ -451,6 +452,38 @@ function buildResultsAtlas() {
             <h3>Clip sweep</h3>
             <p>Relaxing only the upper bound gives the best overall accuracy.</p>
             <div id="clip-table" class="dynamic-table mt-16"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-panel" data-panel="figures">
+        <div class="panel-head">
+          <div>
+            <h3>Dynamic figures reconstructed from paper data</h3>
+            <p>These panels convert table-backed quantitative figures into browser-rendered SVG views. Curves without released raw points are intentionally not fabricated.</p>
+          </div>
+          <div class="metric-switch" aria-label="Dynamic figure selector">
+            <button class="active" data-figure="estimator">Estimator</button>
+            <button data-figure="training">Training</button>
+            <button data-figure="tokens">Tokens</button>
+            <button data-figure="clip">Clip</button>
+          </div>
+        </div>
+        <div class="data-grid two-up">
+          <div class="table-card figure-card">
+            <h3 id="figure-title">Estimator error landscape</h3>
+            <p id="figure-caption">MSE and MAE are plotted jointly so the gap to oracle and DARE are visible.</p>
+            <div id="dynamic-figure" class="dynamic-figure mt-16"></div>
+          </div>
+          <div class="table-card">
+            <h3>Why dynamic instead of screenshots?</h3>
+            <p>Each figure is generated from the same JavaScript data objects that populate the sortable tables, so users can inspect exact numbers and see the pattern in one place.</p>
+            <div class="figure-notes mt-16">
+              <div><strong>Estimator</strong><span>Scatter view of MSE vs. MAE.</span></div>
+              <div><strong>Training</strong><span>AUC and target-step summaries across scales.</span></div>
+              <div><strong>Tokens</strong><span>Difficulty-level token allocation with accuracy labels.</span></div>
+              <div><strong>Clip</strong><span>Heatmap over asymmetric clipping ranges.</span></div>
+            </div>
           </div>
         </div>
       </div>
@@ -676,6 +709,218 @@ function renderHyperparameterSweeps() {
   ], paperData.clip, { defaultSort: "math500" });
 }
 
+function setFigureMeta(title, caption) {
+  const titleEl = document.getElementById("figure-title");
+  const captionEl = document.getElementById("figure-caption");
+  if (titleEl) titleEl.textContent = title;
+  if (captionEl) captionEl.textContent = caption;
+}
+
+function svgShell(width, height, body, label) {
+  return `<svg class="figure-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="${htmlEscape(label)}">${body}</svg>`;
+}
+
+function renderEstimatorFigure() {
+  const root = document.getElementById("dynamic-figure");
+  if (!root) return;
+  setFigureMeta("Estimator error landscape", "MSE and MAE are plotted jointly; the closer a point is to the lower-left corner, the more policy-aligned it is.");
+
+  const rows = paperData.difficulty;
+  const width = 760;
+  const height = 460;
+  const margin = { top: 38, right: 34, bottom: 72, left: 82 };
+  const maxX = 0.18;
+  const maxY = 0.40;
+  const x = (value) => margin.left + (value / maxX) * (width - margin.left - margin.right);
+  const y = (value) => height - margin.bottom - (value / maxY) * (height - margin.top - margin.bottom);
+  const ticksX = [0, 0.05, 0.10, 0.15];
+  const ticksY = [0, 0.10, 0.20, 0.30, 0.40];
+  const color = (row) => row.ours ? "#e5cf93" : row.oracle ? "#8faa8b" : row.baseline ? "#c7837d" : "#91a3bd";
+  const labels = new Map([
+    ["Our Estimation", { dx: 14, dy: -12 }],
+    ["Current FR Estimation", { dx: 14, dy: 18 }],
+    ["Random Selection", { dx: -158, dy: -10 }],
+    ["LLM-Judge", { dx: -126, dy: 22 }]
+  ]);
+
+  const grid = [
+    ...ticksX.map((tick) => `<line class="fig-grid" x1="${x(tick)}" x2="${x(tick)}" y1="${margin.top}" y2="${height - margin.bottom}" />`),
+    ...ticksY.map((tick) => `<line class="fig-grid" x1="${margin.left}" x2="${width - margin.right}" y1="${y(tick)}" y2="${y(tick)}" />`)
+  ].join("");
+  const tickLabels = [
+    ...ticksX.map((tick) => `<text class="fig-tick" x="${x(tick)}" y="${height - 42}" text-anchor="middle">${tick.toFixed(2)}</text>`),
+    ...ticksY.map((tick) => `<text class="fig-tick" x="${margin.left - 14}" y="${y(tick) + 4}" text-anchor="end">${tick.toFixed(2)}</text>`)
+  ].join("");
+  const points = rows.map((row) => {
+    const px = x(row.mse);
+    const py = y(row.mae);
+    const radius = row.ours || row.oracle ? 8 : 6;
+    const label = labels.get(row.method);
+    return `<g class="fig-point ${row.ours ? "ours" : row.oracle ? "oracle" : ""}">
+      <circle cx="${px}" cy="${py}" r="${radius}" fill="${color(row)}" />
+      <title>${row.method}: MSE ${fmt(row.mse, 4)}, MAE ${fmt(row.mae, 4)}</title>
+      ${label ? `<text class="fig-label" x="${px + label.dx}" y="${py + label.dy}">${htmlEscape(row.method)}</text>` : ""}
+    </g>`;
+  }).join("");
+
+  root.innerHTML = svgShell(width, height, `
+    ${grid}
+    <line class="fig-axis" x1="${margin.left}" x2="${width - margin.right}" y1="${height - margin.bottom}" y2="${height - margin.bottom}" />
+    <line class="fig-axis" x1="${margin.left}" x2="${margin.left}" y1="${margin.top}" y2="${height - margin.bottom}" />
+    ${tickLabels}
+    <text class="fig-axis-title" x="${width / 2}" y="${height - 14}" text-anchor="middle">MSE ↓</text>
+    <text class="fig-axis-title" transform="translate(24 ${height / 2}) rotate(-90)" text-anchor="middle">MAE ↓</text>
+    <rect class="fig-region" x="${x(0)}" y="${y(0.22)}" width="${x(0.08) - x(0)}" height="${y(0) - y(0.22)}" rx="16" />
+    <text class="fig-region-label" x="${x(0.012)}" y="${y(0.205)}">low-error region</text>
+    ${points}
+  `, "Estimator MSE versus MAE scatter plot");
+}
+
+function renderTrainingFigure() {
+  const root = document.getElementById("dynamic-figure");
+  if (!root) return;
+  setFigureMeta("Training efficiency, table-derived view", "AUC is displayed as horizontal bars; target-step speed is shown as a second band. This uses reported efficiency-table values, not fabricated curve points.");
+
+  const rows = paperData.training["Qwen2.5-Math-7B"];
+  const width = 760;
+  const height = 460;
+  const margin = { top: 42, right: 92, bottom: 58, left: 172 };
+  const barH = 22;
+  const gap = 20;
+  const maxAuc = Math.max(...rows.map((row) => row.mathAuc));
+  const minAuc = Math.min(...rows.map((row) => row.mathAuc)) - 0.4;
+  const maxStep = Math.max(...rows.map((row) => typeof row.mathStep === "number" ? row.mathStep : 0));
+  const xAuc = (value) => margin.left + ((value - minAuc) / (maxAuc - minAuc)) * (width - margin.left - margin.right);
+  const stepWidth = (value) => typeof value === "number" ? ((maxStep - value) / maxStep) * (width - margin.left - margin.right) : 0;
+  const bars = rows.map((row, index) => {
+    const y = margin.top + index * (barH + gap);
+    const aucWidth = xAuc(row.mathAuc) - margin.left;
+    const speedWidth = stepWidth(row.mathStep);
+    return `<g class="fig-bar-group ${row.ours ? "ours" : row.baseline ? "baseline" : ""}">
+      <text class="fig-row-label" x="${margin.left - 12}" y="${y + 16}" text-anchor="end">${htmlEscape(row.method)}</text>
+      <rect class="fig-bar-bg" x="${margin.left}" y="${y}" width="${width - margin.left - margin.right}" height="${barH}" rx="11" />
+      <rect class="fig-bar-fill" x="${margin.left}" y="${y}" width="${aucWidth}" height="${barH}" rx="11" />
+      <rect class="fig-speed-fill" x="${margin.left}" y="${y + barH + 5}" width="${speedWidth}" height="7" rx="3.5" />
+      <text class="fig-value" x="${width - margin.right + 8}" y="${y + 16}">${fmt(row.mathAuc)} AUC</text>
+      <title>${row.method}: AUC ${fmt(row.mathAuc)}, target step ${fmt(row.mathStep)}, speed ${row.mathSpeed}</title>
+    </g>`;
+  }).join("");
+
+  root.innerHTML = svgShell(width, height, `
+    <text class="fig-title" x="${margin.left}" y="24">Qwen2.5-Math-7B · MATH-500 efficiency</text>
+    ${bars}
+    <text class="fig-legend" x="${margin.left}" y="${height - 24}">gold bar = AUC · sage underbar = faster target-step arrival</text>
+  `, "Training efficiency dynamic bar figure");
+}
+
+function renderTokenFigure() {
+  const root = document.getElementById("dynamic-figure");
+  if (!root) return;
+  setFigureMeta("Difficulty-level token allocation", "DARE is compared against GRPO and SNIS-only filtering. Bars encode output tokens; labels encode accuracy.");
+
+  const rows = [paperData.inference[0], paperData.inference[6], paperData.inference[7]];
+  const levels = [
+    { label: "L1", tok: "l1Tok", acc: "l1Acc" },
+    { label: "L2", tok: "l2Tok", acc: "l2Acc" },
+    { label: "L3", tok: "l3Tok", acc: "l3Acc" },
+    { label: "L4", tok: "l4Tok", acc: "l4Acc" },
+    { label: "L5", tok: "l5Tok", acc: "l5Acc" },
+    { label: "Overall", tok: "overallTok", acc: "overallAcc" }
+  ];
+  const width = 760;
+  const height = 470;
+  const margin = { top: 46, right: 28, bottom: 58, left: 82 };
+  const groupW = (width - margin.left - margin.right) / levels.length;
+  const barW = 18;
+  const maxTok = Math.max(...rows.flatMap((row) => levels.map((level) => row[level.tok])));
+  const y = (value) => height - margin.bottom - (value / maxTok) * (height - margin.top - margin.bottom);
+  const colors = ["#91a3bd", "#8faa8b", "#e5cf93"];
+  const axisTicks = [0, 250, 500, 750, 1000];
+  const grid = axisTicks.map((tick) => `<line class="fig-grid" x1="${margin.left}" x2="${width - margin.right}" y1="${y(tick)}" y2="${y(tick)}" />
+    <text class="fig-tick" x="${margin.left - 12}" y="${y(tick) + 4}" text-anchor="end">${tick}</text>`).join("");
+  const bars = levels.map((level, levelIndex) => {
+    const center = margin.left + groupW * levelIndex + groupW / 2;
+    const groupBars = rows.map((row, rowIndex) => {
+      const x = center + (rowIndex - 1) * (barW + 6) - barW / 2;
+      const top = y(row[level.tok]);
+      const h = height - margin.bottom - top;
+      return `<g>
+        <rect class="fig-token-bar ${row.ours ? "ours" : ""}" x="${x}" y="${top}" width="${barW}" height="${h}" rx="6" fill="${colors[rowIndex]}" />
+        <text class="fig-mini-label" x="${x + barW / 2}" y="${top - 8}" text-anchor="middle">${fmt(row[level.acc], 0)}%</text>
+        <title>${row.method} ${level.label}: ${fmt(row[level.tok])} tokens, ${fmt(row[level.acc])}% accuracy</title>
+      </g>`;
+    }).join("");
+    return `${groupBars}<text class="fig-tick" x="${center}" y="${height - 26}" text-anchor="middle">${level.label}</text>`;
+  }).join("");
+
+  root.innerHTML = svgShell(width, height, `
+    ${grid}
+    <line class="fig-axis" x1="${margin.left}" x2="${width - margin.right}" y1="${height - margin.bottom}" y2="${height - margin.bottom}" />
+    <line class="fig-axis" x1="${margin.left}" x2="${margin.left}" y1="${margin.top}" y2="${height - margin.bottom}" />
+    ${bars}
+    <text class="fig-axis-title" transform="translate(24 ${height / 2}) rotate(-90)" text-anchor="middle">Average output tokens</text>
+    <text class="fig-legend" x="${margin.left}" y="24">blue = GRPO · sage = SNIS only · gold = DARE · labels = accuracy</text>
+  `, "Token allocation grouped bar figure");
+}
+
+function renderClipFigure() {
+  const root = document.getElementById("dynamic-figure");
+  if (!root) return;
+  setFigureMeta("Asymmetric clipping sweep", "Each cell shows benchmark accuracy under an easy-prompt clipping range. Darker gold indicates higher accuracy within the benchmark column.");
+
+  const rows = paperData.clip;
+  const metrics = [
+    { key: "aime24", label: "AIME" },
+    { key: "math500", label: "MATH" },
+    { key: "gsm8k", label: "GSM8K" },
+    { key: "aimeAmc", label: "AIME-AMC" },
+    { key: "minerva", label: "Minerva" },
+    { key: "olympiad", label: "Olympiad" }
+  ];
+  const width = 760;
+  const height = 430;
+  const margin = { top: 62, right: 32, bottom: 42, left: 118 };
+  const cellW = (width - margin.left - margin.right) / metrics.length;
+  const cellH = (height - margin.top - margin.bottom) / rows.length;
+  const maxByKey = Object.fromEntries(metrics.map((metric) => [metric.key, Math.max(...rows.map((row) => row[metric.key]))]));
+  const minByKey = Object.fromEntries(metrics.map((metric) => [metric.key, Math.min(...rows.map((row) => row[metric.key]))]));
+  const color = (value, key) => {
+    const t = (value - minByKey[key]) / Math.max(maxByKey[key] - minByKey[key], 1);
+    const alpha = 0.18 + t * 0.62;
+    return `rgba(229, 207, 147, ${alpha.toFixed(2)})`;
+  };
+  const cells = rows.map((row, rowIndex) => {
+    const y = margin.top + rowIndex * cellH;
+    const label = `<text class="fig-row-label" x="${margin.left - 12}" y="${y + cellH / 2 + 5}" text-anchor="end">${htmlEscape(row.range)}</text>`;
+    const rowCells = metrics.map((metric, colIndex) => {
+      const x = margin.left + colIndex * cellW;
+      return `<g>
+        <rect class="fig-heat-cell ${row.ours ? "ours" : ""}" x="${x + 3}" y="${y + 3}" width="${cellW - 6}" height="${cellH - 6}" rx="12" fill="${color(row[metric.key], metric.key)}" />
+        <text class="fig-heat-value" x="${x + cellW / 2}" y="${y + cellH / 2 + 5}" text-anchor="middle">${fmt(row[metric.key])}</text>
+        <title>${row.range} ${metric.label}: ${fmt(row[metric.key])}</title>
+      </g>`;
+    }).join("");
+    return label + rowCells;
+  }).join("");
+  const headers = metrics.map((metric, index) => `<text class="fig-tick" x="${margin.left + index * cellW + cellW / 2}" y="${margin.top - 20}" text-anchor="middle">${metric.label}</text>`).join("");
+
+  root.innerHTML = svgShell(width, height, `
+    ${headers}
+    ${cells}
+    <text class="fig-axis-title" x="${margin.left}" y="26">Clip range × benchmark accuracy</text>
+  `, "Clip sweep heatmap figure");
+}
+
+function renderDynamicFigure(name = "estimator") {
+  const renderers = {
+    estimator: renderEstimatorFigure,
+    training: renderTrainingFigure,
+    tokens: renderTokenFigure,
+    clip: renderClipFigure
+  };
+  (renderers[name] || renderEstimatorFigure)();
+}
+
 function initNavigation() {
   const toggle = document.querySelector(".nav-toggle");
   const links = document.querySelector(".nav-links");
@@ -780,6 +1025,14 @@ function initMetricButtons() {
       renderDifficultyAndMemory(button.dataset.estimatorView);
     });
   });
+
+  document.querySelectorAll(".metric-switch [data-figure]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const parent = button.closest(".metric-switch");
+      parent?.querySelectorAll("button").forEach((item) => item.classList.toggle("active", item === button));
+      renderDynamicFigure(button.dataset.figure);
+    });
+  });
 }
 
 document.addEventListener("DOMContentLoaded", () => {
@@ -797,4 +1050,5 @@ document.addEventListener("DOMContentLoaded", () => {
   renderDifficultyAndMemory("difficulty");
   renderCodeTransfer();
   renderHyperparameterSweeps();
+  renderDynamicFigure("estimator");
 });
